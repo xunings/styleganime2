@@ -1,5 +1,12 @@
 **/__pycache__
 **/.idea/workspace.xml
 **/.idea/tasks.xml
+**/.idea/vcs.xml
 models
 results
+cache
+*.bak
+datasets
+backup
+dnnlib/tflib/_cudacache/
+test_nvcc
