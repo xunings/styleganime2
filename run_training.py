@@ -33,8 +33,8 @@ _valid_configs = [
 
 #----------------------------------------------------------------------------
 
-def run(dataset, data_dir, result_dir, config_id, num_gpus, total_kimg, gamma, mirror_augment, metrics):
-    train     = EasyDict(run_func_name='training.training_loop.training_loop') # Options for training loop.
+def run(dataset, data_dir, result_dir, config_id, num_gpus, total_kimg, gamma, mirror_augment, metrics, training_loop):
+    train     = EasyDict(run_func_name='training.' + training_loop + '.training_loop') # Options for training loop.
     G         = EasyDict(func_name='training.networks_stylegan2.G_main')       # Options for generator network.
     D         = EasyDict(func_name='training.networks_stylegan2.D_stylegan2')  # Options for discriminator network.
     G_opt     = EasyDict(beta1=0.0, beta2=0.99, epsilon=1e-8)                  # Options for generator optimizer.
@@ -168,6 +168,7 @@ def main():
     parser.add_argument('--gamma', help='R1 regularization weight (default is config dependent)', default=None, type=float)
     parser.add_argument('--mirror-augment', help='Mirror augment (default: %(default)s)', default=False, metavar='BOOL', type=_str_to_bool)
     parser.add_argument('--metrics', help='Comma-separated list of metrics or "none" (default: %(default)s)', default='fid50k', type=_parse_comma_sep)
+    parser.add_argument('--training_loop', help='Training loop script', default='training_loop')
 
     args = parser.parse_args()
 
