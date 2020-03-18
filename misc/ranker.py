@@ -19,6 +19,13 @@ def main(args):
         # print(file_path)
         img = np.asarray(PIL.Image.open(file_path))
         img = img.reshape(1, 3, 512, 512)
+        # Not in twdne, but I think it is necessary to adjust the range here.
+        # See training_loop.process_reals
+        img = img.astype('float32')
+        scale = 2.0 / 255.0
+        bias = -1.0
+        # [0, 255] to [-1, 1]
+        img = img * scale + bias
 
         # img = cv2.imread(file_path, cv2.IMREAD_COLOR)
 

@@ -106,7 +106,11 @@ class Projector:
         self._info('Building loss graph...')
         self._target_images_var = tf.Variable(tf.zeros(proc_images_expr.shape), name='target_images_var')
         if self._lpips is None:
-            self._lpips = misc.load_pkl('http://d36zk2xti64re0.cloudfront.net/stylegan1/networks/metrics/vgg16_zhang_perceptual.pkl')
+            try:
+                self._lpips = misc.load_pkl(
+                    '/storage04/users/shaoxuning/projects/acgface/try/stylegan2/models/vgg16_zhang_perceptual.pkl')
+            except Exception:
+                self._lpips = misc.load_pkl('http://d36zk2xti64re0.cloudfront.net/stylegan1/networks/metrics/vgg16_zhang_perceptual.pkl')
         self._dist = self._lpips.get_output_for(proc_images_expr, self._target_images_var)
         self._loss = tf.reduce_sum(self._dist)
 

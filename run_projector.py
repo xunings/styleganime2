@@ -10,6 +10,7 @@ import dnnlib
 import dnnlib.tflib as tflib
 import re
 import sys
+import cv2
 
 import projector
 import pretrained_networks
@@ -52,19 +53,31 @@ def project_generated_images(network_pkl, seeds, num_snapshots, truncation_psi):
 
 #----------------------------------------------------------------------------
 
-def project_real_images(network_pkl, dataset_name, data_dir, num_images, num_snapshots):
+def project_real_images(network_pkl, dataset_name, data_dir, num_images, num_snapshots, input_images):
     print('Loading networks from "%s"...' % network_pkl)
     _G, _D, Gs = pretrained_networks.load_networks(network_pkl)
     proj = projector.Projector()
     proj.set_network(Gs)
 
-    print('Loading images from "%s"...' % dataset_name)
-    dataset_obj = dataset.load_dataset(data_dir=data_dir, tfrecord_dir=dataset_name, max_label_size=0, repeat=False, shuffle_mb=0)
-    assert dataset_obj.shape == Gs.output_shape[1:]
+    if input_images is None:
+        print('Loading images from "%s"...' % dataset_name)
+        dataset_obj = dataset.load_dataset(data_dir=data_dir, tfrecord_dir=dataset_name, max_label_size=0, repeat=False, shuffle_mb=0)
+        assert dataset_obj.shape == Gs.output_shape[1:]
+    else:
+        num_images = min(num_images, len(input_images))
 
     for image_idx in range(num_images):
         print('Projecting image %d/%d ...' % (image_idx, num_images))
-        images, _labels = dataset_obj.get_minibatch_np(1)
+        if input_images is None:
+            images, _labels = dataset_obj.get_minibatch_np(1)
+        else:
+            # images = None
+            image_path = input_images[image_idx]
+            print(image_path)
+            images = cv2.imread(image_path, cv2.IMREAD_COLOR)
+            images = images.transpose((2, 0, 1)) # HWC -> CHW
+            images = images[::-1, :, :]
+            images = np.expand_dims(images, axis=0)
         images = misc.adjust_dynamic_range(images, [0, 255], [-1, 1])
         project_image(proj, targets=images, png_prefix=dnnlib.make_run_dir_path('image%04d-' % image_idx), num_snapshots=num_snapshots)
 
@@ -114,6 +127,7 @@ Run 'python %(prog)s <subcommand> --help' for subcommand help.''',
 
     project_real_images_parser = subparsers.add_parser('project-real-images', help='Project real images')
     project_real_images_parser.add_argument('--network', help='Network pickle filename', dest='network_pkl', required=True)
+    project_real_images_parser.add_argument('--input_images', help='Test images to be projected', type=str, nargs='+', default=None)
     project_real_images_parser.add_argument('--data-dir', help='Dataset root directory', required=True)
     project_real_images_parser.add_argument('--dataset', help='Training dataset', dest='dataset_name', required=True)
     project_real_images_parser.add_argument('--num-snapshots', type=int, help='Number of snapshots (default: %(default)s)', default=5)
