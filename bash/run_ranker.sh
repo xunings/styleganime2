@@ -9,15 +9,18 @@ export SRC_DIR=/storage04/users/shaoxuning/projects/acgface/try/stylegan2/result
 export SCRIPT=/storage04/users/shaoxuning/projects/acgface/try/stylegan2/misc/ranker.py
 export MODEL=/storage04/users/shaoxuning/projects/acgface/try/stylegan2/models/2020-01-11-skylion-stylegan2-animeportraits-networksnapshot-024664.pkl
 export OUTFILE=rank/rank.txt
+export SELECT_NUM=25
 
 find $SRC_DIR -type f -name "*.png" | xargs python3 $SCRIPT --model $MODEL --output $OUTFILE --images
+
+cat $OUTFILE | sort --field-separator ' ' --key 2 --numeric-sort | tee $OUTFILE
 
 mkdir rank/worst
 mkdir rank/best
 
 echo 'Finding the worst...'
-cat $OUTFILE | sort --field-separator ' ' --key 2 --numeric-sort | head -25 | cut -d ' ' -f1 | xargs -n1 -I{} cp {} rank/worst/
+cat $OUTFILE | head -"$SELECT_NUM" | cut -d ' ' -f1 | xargs -n1 -I{} cp {} rank/worst/
 
 echo 'Finding the best...'
-cat $OUTFILE | sort --field-separator ' ' --key 2 --numeric-sort | tail -25 | cut -d ' ' -f1 | xargs -n1 -I{} cp {} rank/best/
+cat $OUTFILE | tail -"$SELECT_NUM" | cut -d ' ' -f1 | xargs -n1 -I{} cp {} rank/best/
 

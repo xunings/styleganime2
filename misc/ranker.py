@@ -9,6 +9,7 @@ import dnnlib.tflib as tflib
 # import sys
 import argparse
 import PIL.Image
+from training.misc import adjust_dynamic_range
 
 
 def main(args):
@@ -19,13 +20,15 @@ def main(args):
         # print(file_path)
         img = np.asarray(PIL.Image.open(file_path))
         img = img.reshape(1, 3, 512, 512)
+        img = adjust_dynamic_range(data=img, drange_in=[0, 255], drange_out=[-1.0, 1.0])
+
         # Not in twdne, but I think it is necessary to adjust the range here.
         # See training_loop.process_reals
-        img = img.astype('float32')
-        scale = 2.0 / 255.0
-        bias = -1.0
+        # img = img.astype('float32')
+        # scale = 2.0 / 255.0
+        # bias = -1.0
         # [0, 255] to [-1, 1]
-        img = img * scale + bias
+        # img = img * scale + bias
 
         # img = cv2.imread(file_path, cv2.IMREAD_COLOR)
 
@@ -35,7 +38,7 @@ def main(args):
         # img = img[::-1, :, :]  # BGR -> RGB
         # img = np.expand_dims(img, axis=0)
         # img = img.reshape(1, 3, 512, 512)
-        score = D.run(img, None)
+        score = D.run(img, None, resolution=512)
         print(file_path, score[0][0])
         with open(args.output, 'a') as fout:
             fout.write(file_path + ' ' + str(score[0][0]) + '\n')
