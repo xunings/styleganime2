@@ -11,7 +11,7 @@ export MODEL=/storage04/users/shaoxuning/projects/acgface/try/stylegan2/models/2
 # export MODEL=/storage04/users/shaoxuning/projects/acgface/try/stylegan2/models/kagura-010060-20200227.pkl
 export OUTFILE=rank/rank.txt
 export OUTFILE_SORTED=rank/rank_sorted.txt
-export SELECT_NUM=25
+export SELECT_NUM=100
 
 find $SRC_DIR -type f -name "*.png" | xargs python3 $SCRIPT --model $MODEL --output $OUTFILE --images
 
