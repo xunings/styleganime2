@@ -17,6 +17,7 @@ def preprocess(file_path):
     img = img.transpose([2, 0, 1])  # HWC => CHW
     img = img.reshape((1, 3, 512, 512))
     # img = np.expand_dims(img, axis=0)
+    img = adjust_dynamic_range(data=img, drange_in=[0, 255], drange_out=[-1.0, 1.0])
     return img
 
 
@@ -50,7 +51,7 @@ def main(args):
                 print('Companion: {}'.format(images[idx_another_img]))
                 another_img = preprocess(images[idx_another_img])
                 img_minibatch[j+1, :] = another_img
-            img_minibatch = adjust_dynamic_range(data=img_minibatch, drange_in=[0, 255], drange_out=[-1.0, 1.0])
+            # img_minibatch = adjust_dynamic_range(data=img_minibatch, drange_in=[0, 255], drange_out=[-1.0, 1.0])
             output = D.run(img_minibatch, None, resolution=512)
             print('output: {}'.format(output))
             scores_this_img.append(output[0][0])
