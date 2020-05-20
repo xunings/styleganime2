@@ -11,18 +11,20 @@ export MODEL=/storage04/users/shaoxuning/projects/acgface/try/stylegan2/models/2
 # export MODEL=/storage04/users/shaoxuning/projects/acgface/try/stylegan2/models/kagura-010060-20200227.pkl
 export OUTFILE=rank/rank.txt
 export OUTFILE_SORTED=rank/rank_sorted.txt
+export WORSTDIR=rank/worst/
+export BESTDIR=rank/best/
 export SELECT_NUM=100
 
-find $SRC_DIR -type f -name "*.png" | xargs python3 $SCRIPT --model $MODEL --output $OUTFILE --images
+find "$SRC_DIR" -type f -name "*.png" | xargs python3 "$SCRIPT" --model "$MODEL" --output "$OUTFILE" --images
 
-cat $OUTFILE | sort --field-separator ' ' --key 2 --numeric-sort > ${OUTFILE_SORTED}
+cat "$OUTFILE" | sort --field-separator ' ' --key 2 --numeric-sort > ${OUTFILE_SORTED}
 
-mkdir rank/worst
-mkdir rank/best
+mkdir "$WORSTDIR"
+mkdir "$BESTDIR"
 
 echo 'Finding the worst...'
-cat ${OUTFILE_SORTED} | head -"$SELECT_NUM" | cut -d ' ' -f1 | xargs -n1 -I{} cp {} rank/worst/
+cat ${OUTFILE_SORTED} | head -"$SELECT_NUM" | cut -d ' ' -f1 | xargs -n1 -I{} cp {} "$WORSTDIR"
 
 echo 'Finding the best...'
-cat ${OUTFILE_SORTED} | tail -"$SELECT_NUM" | cut -d ' ' -f1 | xargs -n1 -I{} cp {} rank/best/
+cat ${OUTFILE_SORTED} | tail -"$SELECT_NUM" | cut -d ' ' -f1 | xargs -n1 -I{} cp {} "$BESTDIR"
 
