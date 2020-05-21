@@ -1,11 +1,10 @@
 # Ref: https://www.gwern.net/Faces#discriminator-ranking
 
-import os
 import pickle
 import numpy as np
 import cv2
 import dnnlib.tflib as tflib
-# import sys
+import random
 import argparse
 import PIL.Image
 from training.misc import adjust_dynamic_range
@@ -14,51 +13,63 @@ from training.misc import adjust_dynamic_range
 def preprocess(file_path):
     # print(file_path)
     img = np.asarray(PIL.Image.open(file_path))
+
+    # Preprocessing from dataset_tool.create_from_images
     img = img.transpose([2, 0, 1])  # HWC => CHW
-    img = img.reshape((1, 3, 512, 512))
     # img = np.expand_dims(img, axis=0)
+    img = img.reshape((1, 3, 512, 512))
+
+    # Preprocessing from training_loop.process_reals
     img = adjust_dynamic_range(data=img, drange_in=[0, 255], drange_out=[-1.0, 1.0])
     return img
 
 
 def main(args):
-
-    minibatch_size = 4
+    random.seed(args.random_seed)
+    minibatch_size = args.minibatch_size
     input_shape = (minibatch_size, 3, 512, 512)
     # print(args.images)
     images = args.images
     images.sort()
-    # Number of minibatches per image
-    # Each minibatch contains the target image plus (minibatch_size - 1) other images.
-    n_minibatches = min(args.num_runs_per_img,
-                        len(images) - 1 // (minibatch_size - 1))
 
     tflib.init_tf()
     _G, D, _Gs = pickle.load(open(args.model, "rb"))
     # D.print_layers()
 
-    for i in range(len(images)):
-        print('Processing: {}'.format(images[i]))
-        img = preprocess(images[i])
-        idx_another_img = i
-        scores_this_img = []
-        for _ in range(n_minibatches):
-            img_minibatch = np.zeros(input_shape)
-            img_minibatch[0,:] = img
-            for j in range(minibatch_size - 1):
-                idx_another_img = idx_another_img+1 if idx_another_img+1 < len(images) else 0
-                print('Companion: {}'.format(images[idx_another_img]))
-                another_img = preprocess(images[idx_another_img])
-                img_minibatch[j+1, :] = another_img
-            # img_minibatch = adjust_dynamic_range(data=img_minibatch, drange_in=[0, 255], drange_out=[-1.0, 1.0])
-            output = D.run(img_minibatch, None, resolution=512)
-            print('output: {}'.format(output))
-            scores_this_img.append(output[0][0])
-        score_this_img = sum(scores_this_img) / len(scores_this_img)
-        print(images[i], score_this_img)
+    image_score_all = [(image, []) for image in images]
 
-        with open(args.output, 'a') as fout:
-            fout.write(images[i] + ' ' + str(score_this_img) + '\n')
+    # Shuffle the images and process each image in multiple minibatches.
+    # Note: networks.stylegan2.minibatch_stddev_layer
+    # calculates the standard deviation of a minibatch group as a feature channel,
+    # which means that the output of the discriminator actually depends
+    # on the companion images in the same minibatch.
+    for i_shuffle in range(args.num_shuffles):
+        # print('shuffle: {}'.format(i_shuffle))
+        random.shuffle(image_score_all)
+        for idx_1st_img in range(0, len(image_score_all), minibatch_size):
+            idx_img_minibatch = []
+            images_minibatch = []
+            input_minibatch = np.zeros(input_shape)
+            for i in range(minibatch_size):
+                idx_img = (idx_1st_img + i) % len(image_score_all)
+                idx_img_minibatch.append(idx_img)
+                image = image_score_all[idx_img][0]
+                images_minibatch.append(image)
+                img = preprocess(image)
+                input_minibatch[i, :] = img
+            output = D.run(input_minibatch, None, resolution=512)
+            print('shuffle: {}, indices: {}, images: {}'
+                  .format(i_shuffle, idx_img_minibatch, images_minibatch))
+            print('Output: {}'.format(output))
+            for i in range(minibatch_size):
+                idx_img = idx_img_minibatch[i]
+                image_score_all[idx_img][1].append(output[i][0])
+
+    with open(args.output, 'a') as fout:
+        for image, score_list in image_score_all:
+            print('Image: {}, score_list: {}'.format(image, score_list))
+            avg_score = sum(score_list)/len(score_list)
+            fout.write(image + ' ' + str(avg_score) + '\n')
 
 
 def parse_arguments():
@@ -67,7 +78,9 @@ def parse_arguments():
                         help='.pkl model')
     parser.add_argument('--images', nargs='+')
     parser.add_argument('--output', type=str, default='rank.txt')
-    parser.add_argument('--num_runs_per_img', type=int, default=10)
+    parser.add_argument('--minibatch_size', type=int, default=4)
+    parser.add_argument('--num_shuffles', type=int, default=5)
+    parser.add_argument('--random_seed', type=int, default=0)
     return parser.parse_args()
 
 
