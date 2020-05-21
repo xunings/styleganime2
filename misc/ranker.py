@@ -25,13 +25,12 @@ def main(args):
 
     minibatch_size = 4
     input_shape = (minibatch_size, 3, 512, 512)
-    max_n_minibatches = 10
     # print(args.images)
     images = args.images
     images.sort()
     # Number of minibatches per image
     # Each minibatch contains the target image plus (minibatch_size - 1) other images.
-    n_minibatches = min(max_n_minibatches,
+    n_minibatches = min(args.num_runs_per_img,
                         len(images) - 1 // (minibatch_size - 1))
 
     tflib.init_tf()
@@ -68,6 +67,7 @@ def parse_arguments():
                         help='.pkl model')
     parser.add_argument('--images', nargs='+')
     parser.add_argument('--output', type=str, default='rank.txt')
+    parser.add_argument('--num_runs_per_img', type=int, default=10)
     return parser.parse_args()
 
 
